@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创意WebXR DICOM Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://unpkg.com/dicom-parser@1.8.7/dist/dicomParser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/GLTFLoader.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3a8a, #6b21a8);
+            color: #ffffff;
+            font-family: 'Arial', sans-serif;
+        }
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .btn {
+            transition: all 0.3s ease;
+            background: linear-gradient(90deg, #4b5563, #6b7280);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: linear-gradient(90deg, #6b7280, #9ca3af);
+            transform: scale(1.05);
+        }
+        #dicomInput {
+            opacity: 0;
+            position: absolute;
+            width: 0;
+            height: 0;
+        }
+        #customFileLabel {
+            background: linear-gradient(90deg, #10b981, #34d399);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        #customFileLabel:hover {
+            background: linear-gradient(90deg, #34d399, #6ee7b7);
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="absolute top-4 left-4 z-10">
+            <label id="customFileLabel" for="dicomInput" class="btn">上传DICOM文件</label>
+            <input type="file" id="dicomInput" accept=".dcm" />
+        </div>
+        <button id="xrButton" class="btn absolute top-4 right-4 z-10">进入WebXR</button>
+        <button id="toggleModelButton" class="btn absolute top-16 right-4 z-10 hidden">切换3D模型</button>
+        <div id="info">请上传DICOM文件以开始创意可视化</div>
+    </div>
+    <script>
+        // 初始化场景
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        // 添加环境光和方向光
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+
+        // 轨道控制器
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        camera.position.set(0, 0, 5);
+
+        // 自定义着色器
+        const customShaderMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                texture1: { value: null },
+                time: { value: 0.0 }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D texture1;
+                uniform float time;
+                varying vec2 vUv;
+                void main() {
+                    vec4 color = texture2D(texture1, vUv);
+                    float glow = sin(time + vUv.x * 5.0) * 0.1 + 0.9;
+                    gl_FragColor = vec4(color.rgb * glow, color.a);
+                }
+            `,
+            side: THREE.DoubleSide
+        });
+
+        // WebXR会话设置
+        async function activateXR() {
+            if (navigator.xr) {
+                try {
+                    const session = await navigator.xr.requestSession('immersive-vr', {
+                        optionalFeatures: ['local-floor', 'bounded-floor']
+                    });
+                    renderer.xr.setSession(session);
+                    document.getElementById('info').innerText = '已进入WebXR模式';
+                } catch (err) {
+                    document.getElementById('info').innerText = '进入WebXR失败: ' + err;
+                }
+            } else {
+                document.getElementById('info').innerText = 'WebXR不可用';
+            }
+        }
+
+        // 加载3D模型
+        let modelMesh = null;
+        const gltfLoader = new THREE.GLTFLoader();
+        let modelVisible = false;
+        function load3DModel() {
+            gltfLoader.load(
+                'https://threejs.org/examples/models/gltf/DamagedHelmet.gltf',
+                (gltf) => {
+                    modelMesh = gltf.scene;
+                    modelMesh.scale.set(0.5, 0.5, 0.5);
+                    modelMesh.position.set(2, 0, 0);
+                    scene.add(modelMesh);
+                    document.getElementById('toggleModelButton').classList.remove('hidden');
+                    document.getElementById('info').innerText = '3D创意模型已加载';
+                },
+                undefined,
+                (err) => {
+                    document.getElementById('info').innerText = '加载3D模型失败: ' + err;
+                }
+            );
+        }
+
+        // 切换3D模型显示
+        document.getElementById('toggleModelButton').addEventListener('click', () => {
+            if (modelMesh) {
+                modelVisible = !modelVisible;
+                modelMesh.visible = modelVisible;
+                document.getElementById('info').innerText = modelVisible ? '3D模型已显示' : '3D模型已隐藏';
+            }
+        });
+
+        // 处理DICOM文件
+        let dicomMesh = null;
+        document.getElementById('dicomInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const arrayBuffer = e.target.result;
+                try {
+                    const dataSet = dicomParser.parseDicom(new Uint8Array(arrayBuffer));
+
+                    // 获取像素数据
+                    const pixelData = dataSet.elements.x7fe00010;
+                    const width = dataSet.uint16('x00280010');
+                    const height = dataSet.uint16('x00280011');
+
+                    // 创建纹理
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    const imageData = ctx.createImageData(width, height);
+
+                    // 转换像素数据
+                    const pixels = new Uint16Array(arrayBuffer, pixelData.dataOffset, pixelData.length / 2);
+                    for (let i = 0; i < pixels.length; i++) {
+                        const value = pixels[i] / 65535 * 255;
+                        imageData.data[i * 4] = value;
+                        imageData.data[i * 4 + 1] = value;
+                        imageData.data[i * 4 + 2] = value;
+                        imageData.data[i * 4 + 3] = 255;
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+
+                    // 创建Three.js纹理
+                    const texture = new THREE.CanvasTexture(canvas);
+                    customShaderMaterial.uniforms.texture1.value = texture;
+                    const geometry = new THREE.PlaneGeometry(width / height, 1);
+                    if (dicomMesh) scene.remove(dicomMesh);
+                    dicomMesh = new THREE.Mesh(geometry, customShaderMaterial);
+                    scene.add(dicomMesh);
+
+                    document.getElementById('info').innerText = 'DICOM图像已加载，创意着色器应用';
+                    load3DModel(); // 加载创意3D模型
+                } catch (err) {
+                    document.getElementById('info').innerText = '解析DICOM文件失败: ' + err;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // 渲染循环
+        function animate(time) {
+            renderer.setAnimationLoop(() => {
+                controls.update();
+                if (customShaderMaterial) {
+                    customShaderMaterial.uniforms.time.value = time * 0.001;
+                }
+                if (modelMesh && modelVisible) {
+                    modelMesh.rotation.y += 0.01;
+                }
+                renderer.render(scene, camera);
+            });
+        }
+
+        // 启动WebXR按钮
+        document.getElementById('xrButton').addEventListener('click', activateXR);
+
+        // 处理窗口大小变化
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate(0);
+    </script>
+</body>
+</html>
