@@ -20,7 +20,7 @@ from tqdm import tqdm
 class AdvancedSlicerApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("医学影像3D可视化与AR分析 - 智能诊疗新纪元")
+        self.setWindowTitle("交互式3D医学影像与AR辅助诊断创意平台")
         self.setGeometry(100, 100, 1600, 1000)
         self.dcm_files = []
         self.volume_data = None
@@ -199,7 +199,7 @@ class AdvancedSlicerApp(QMainWindow):
         self.statusBar().showMessage(f"切换到 {module} 模块")
 
     def load_dicom_files(self):
-        default_dir = r"D:\数据本2002王燃实训\rsna-2024-lumbar-spine-degenerative-classification\train_images\4003253\702807833"
+        default_dir = r"D:\rsna-2024-lumbar-spine-degenerative-classification\train_images\4003253\702807833"
         self.dcm_files = glob.glob(os.path.join(default_dir, "*.dcm"))
         if not self.dcm_files:
             files, _ = QFileDialog.getOpenFileNames(self, "选择DICOM文件", default_dir, "DICOM文件 (*.dcm)")
@@ -226,15 +226,15 @@ class AdvancedSlicerApp(QMainWindow):
     def process_dicom_files(self):
         reader = sitk.ImageSeriesReader()
         series_ids = reader.GetGDCMSeriesIDs(
-            r"D:\数据本2002王燃实训\rsna-2024-lumbar-spine-degenerative-classification\train_images\4003253\702807833")
+            r"D:\rsna-2024-lumbar-spine-degenerative-classification\train_images\4003253\702807833")
         if not series_ids:
             raise ValueError("未找到DICOM序列")
 
         max_series = max(series_ids, key=lambda sid: len(reader.GetGDCMSeriesFileNames(
-            r"D:\数据本2002王燃实训\rsna-2024-lumbar-spine-degenerative-classification\train_images\4003253\702807833",
+            r"D:\rsna-2024-lumbar-spine-degenerative-classification\train_images\4003253\702807833",
             sid)))
         dicom_names = reader.GetGDCMSeriesFileNames(
-            r"D:\数据本2002王燃实训\rsna-2024-lumbar-spine-degenerative-classification\train_images\4003253\702807833",
+            r"D:\rsna-2024-lumbar-spine-degenerative-classification\train_images\4003253\702807833",
             max_series)
         reader.SetFileNames(dicom_names)
 
