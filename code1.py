@@ -1,3 +1,4 @@
+#数据集可自行下载
 import numpy as np
 import pandas as pd
 import os
@@ -21,21 +22,21 @@ import warnings
 
 warnings.filterwarnings('ignore')
 label_coordinates_df = pd.read_csv(
-    '/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train_label_coordinates.csv')
+    '/rsna-2024-lumbar-spine-degenerative-classification/train_label_coordinates.csv')
 train_series = pd.read_csv(
-    '/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train_series_descriptions.csv')
-df_train = pd.read_csv('/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train.csv')
-df_sub = pd.read_csv('/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/sample_submission.csv')
+    '/rsna-2024-lumbar-spine-degenerative-classification/train_series_descriptions.csv')
+df_train = pd.read_csv('/rsna-2024-lumbar-spine-degenerative-classification/train.csv')
+df_sub = pd.read_csv('/rsna-2024-lumbar-spine-degenerative-classification/sample_submission.csv')
 test_series = pd.read_csv(
-    '/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/test_series_descriptions.csv')
+    '/rsna-2024-lumbar-spine-degenerative-classification/test_series_descriptions.csv')
 label_coordinates_df.head()
 label_coordinates_df.shape
-folder_path = '/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train_images/100206310/1012284084'
+folder_path = '/rsna-2024-lumbar-spine-degenerative-classification/train_images/100206310/1012284084'
 dicom_files = [f for f in os.listdir(folder_path) if f.endswith('.dcm')]
-folder_path = '/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train_images/100206310/1012284084'
+folder_path = '/rsna-2024-lumbar-spine-degenerative-classification/train_images/100206310/1012284084'
 dicom_files = [f for f in os.listdir(folder_path) if f.endswith('.dcm')]
 label_coordinates_df = pd.read_csv(
-    '/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train_label_coordinates.csv')
+    '/rsna-2024-lumbar-spine-degenerative-classification/train_label_coordinates.csv')
 
 study_id = folder_path.split('/')[-2]
 study_label_coordinates = label_coordinates_df[label_coordinates_df['study_id'] == int(study_id)]
@@ -115,7 +116,7 @@ def create_animation(ims):
     return animation.FuncAnimation(fig, animate_func, frames=len(ims), interval=1000 // 24)
 
 
-path_to_folder = "/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train_images/100206310/1792451510"
+path_to_folder = "/rsna-2024-lumbar-spine-degenerative-classification/train_images/100206310/1792451510"
 images = load_dicom_line(path_to_folder)
 anim = create_animation(images)
 anim
@@ -183,7 +184,7 @@ def plot_image_hist(image):
     plt.show()
 
 
-path_to_folder = "/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train_images/1002894806/866293114"
+path_to_folder = "/rsna-2024-lumbar-spine-degenerative-classification/train_images/1002894806/866293114"
 dicom_files = read_dicom_files(path_to_folder)
 
 if dicom_files:
@@ -207,7 +208,7 @@ def get_flair_images(dicom_files):
     return np.array(images)
 
 
-path_to_folder = "/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train_images/100206310/1012284084"
+path_to_folder = "/rsna-2024-lumbar-spine-degenerative-classification/train_images/100206310/1012284084"
 dicom_files = read_dicom_files(path_to_folder)
 flair_images = get_flair_images(dicom_files)
 fig = px.imshow(flair_images, animation_frame=0, binary_string=True,
@@ -243,7 +244,7 @@ def plot_3d(image, threshold=-300):
     plt.show()
 
 
-folder_path = "/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train_images/100206310/1012284084"
+folder_path = "/rsna-2024-lumbar-spine-degenerative-classification/train_images/100206310/1012284084"
 dicom_images = load_dicom_images(folder_path, num_images=5)
 plot_3d(dicom_images, threshold=300)
 
@@ -285,7 +286,7 @@ def plot_3d_interactive(image, threshold=300):
     fig.show()
 
 
-folder_path = "/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/train_images/1002894806/866293114"
+folder_path = "/rsna-2024-lumbar-spine-degenerative-classification/train_images/1002894806/866293114"
 dicom_images = load_dicom_images(folder_path, num_images=5)
 plot_3d_interactive(dicom_images, threshold=100)
 
@@ -344,7 +345,7 @@ predictions_df['study_id'] = X_test['study_id'].values
 predictions_df['condition_level'] = X_test.index.map(
     lambda idx: f"{test_rows[idx]['condition']}_{test_rows[idx]['level']}")
 predictions_df['row_id'] = predictions_df['study_id'].astype(str) + '_' + predictions_df['condition_level']
-df_sub1 = pd.read_csv('/kaggle/input/rsna-2024-lumbar-spine-degenerative-classification/sample_submission.csv')
+df_sub1 = pd.read_csv('/rsna-2024-lumbar-spine-degenerative-classification/sample_submission.csv')
 
 normal_mild_value = (predictions_df['Normal/Mild'].iloc[0])
 moderate_value = (predictions_df['Moderate'].iloc[0])
